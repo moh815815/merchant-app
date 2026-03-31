@@ -25,13 +25,12 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 product_id INTEGER NOT NULL,
                 quantity INTEGER NOT NULL,
-                date TEXT NOT NULL,
-                FOREIGN KEY (product_id) REFERENCES products(id)
+                date TEXT NOT NULL
             )
         """)
         return True
     except Exception as e:
-        st.error(f"خطأ في قاعدة البيانات: {e}")
+        st.error(f"خطأ: {e}")
         return False
 
 def add_product(name, price, stock):
@@ -47,8 +46,8 @@ def record_sale(product_id, quantity):
     current_stock = result.rows[0][0]
     
     if current_stock >= quantity:
-        new_stock = current_stock - quantity        client.execute("UPDATE products SET stock = ? WHERE id = ?", [new_stock, product_id])
-        client.execute(
+        new_stock = current_stock - quantity
+        client.execute("UPDATE products SET stock = ? WHERE id = ?", [new_stock, product_id])        client.execute(
             "INSERT INTO sales (product_id, quantity, date) VALUES (?, ?, ?)",
             [product_id, quantity, datetime.now().strftime("%Y-%m-%d %H:%M")]
         )
@@ -77,7 +76,7 @@ if init_db():
         st.subheader("إضافة منتج جديد")
         name = st.text_input("اسم المنتج")
         price = st.number_input("السعر", min_value=0.0)
-        stock = st.number_input("الكمية", min_value=1, step=1)
+        stock = st.number_input("الكمية", min_value=1)
         if st.button("إضافة"):
             add_product(name, price, stock)
             st.success("✅ تم الإضافة!")
@@ -87,8 +86,8 @@ if init_db():
         df = get_products()
         if not df.empty:
             product = st.selectbox("اختر المنتج", df['name'].tolist())
-            product_id = df[df['name'] == product]['id'].values[0]
-            qty = st.number_input("الكمية", min_value=1, step=1)
+            product_id = int(df[df['name'] == product]['id'].values[0])
+            qty = st.number_input("الكمية", min_value=1)
             if st.button("تأكيد البيع"):
                 if record_sale(product_id, qty):
                     st.success("✅ تم البيع!")
@@ -96,8 +95,8 @@ if init_db():
                     st.error("❌ المخزون غير كافٍ!")
         else:
             st.warning("أضف منتجات أولاً")
-        elif choice == "📊 لوحة التحكم":
-        st.subheader("إحصائيات المبيعات")
+    
+    elif choice == "📊 لوحة التحكم":        st.subheader("إحصائيات المبيعات")
         sales = get_sales()
         if not sales.empty:
             st.metric("إجمالي المبيعات", len(sales))
