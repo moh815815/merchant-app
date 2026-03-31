@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import requests
@@ -15,48 +14,40 @@ def query_db(sql, params=[]):
     except:
         return None
 
-def upload_to_imgur(image_file):
-    try:
-        img_data = image_file.read()
-        b64 = base64.b64encode(img_data).decode()
-        
-        headers = {"Authorization": "Client-ID 8c0c1a0c8c0c1a0"}
-        data = {"image": b64}
-        
-        response = requests.post("https://api.imgur.com/3/image", data=data, headers=headers)
-        result = response.json()
-        
-        if result.get("success"):
-            return result["data"]["link"]
-        return None
-    except:
-        return None
-
 def init_db():
     query_db("""CREATE TABLE IF NOT EXISTS products (
         id INTEGER PRIMARY KEY AUTOINCREMENT, 
         name TEXT, 
         price REAL, 
         stock INTEGER,
-        image_url TEXT
+        image_data TEXT
     )""")
 
-def add_product(name, price, stock, image_url=""):
-    query_db("INSERT INTO products (name, price, stock, image_url) VALUES (?, ?, ?, ?)", 
-             [name, price, stock, image_url])
+def add_product(name, price, stock, image_data=None):
+    query_db("INSERT INTO products (name, price, stock, image_data) VALUES (?, ?, ?, ?)", 
+             [name, price, stock, image_data])
 
 def delete_product(pid):
     query_db("DELETE FROM products WHERE id = ?", [pid])
 
-def get_products():    result = query_db("SELECT * FROM products")
+def get_products():
+    result = query_db("SELECT * FROM products")
     if result and "results" in result:
         rows = result["results"][0].get("rows", [])
-        return pd.DataFrame(rows, columns=["id", "name", "price", "stock", "image_url"])
+        return pd.DataFrame(rows, columns=["id", "name", "price", "stock", "image_data"])
     return pd.DataFrame()
+
+def encode_image(uploaded_file):
+    if uploaded_file is not None:
+        bytes_data = uploaded_file.getvalue()
+        # تصغير الصورة عشان متكونش كبيرة
+        if len(bytes_data) > 500000:  # لو أكبر من 500KB
+            return None
+        return base64.b64encode(bytes_data).decode()
+    return None
 
 st.set_page_config(page_title="Merchant System", layout="wide")
 init_db()
-
 st.title("🛒 Sales Management System")
 st.success("Connected!")
 
@@ -66,29 +57,28 @@ st.markdown("---")
 st.header("➕ Add New Product")
 
 name = st.text_input("Product Name")
-col1, col2, col3 = st.columns(3)
+col1, col2 = st.columns(2)
+
 with col1:
     price = st.number_input("Price", min_value=0.0)
-with col2:
     stock = st.number_input("Stock", min_value=1)
-with col3:
-    uploaded_file = st.file_uploader("📸 Upload Image", type=["jpg", "jpeg", "png"])
 
-if uploaded_file:
-    st.image(uploaded_file, width=200, caption="Preview")
+with col2:
+    uploaded_file = st.file_uploader("📸 Upload Image (max 500KB)", type=["jpg", "jpeg", "png"])
+    if uploaded_file:
+        st.image(uploaded_file, width=200, caption="Preview")
 
 if st.button("Add Product", type="primary"):
     if name:
-        image_url = ""
+        image_data = None
         if uploaded_file:
-            with st.spinner("Uploading image..."):
-                image_url = upload_to_imgur(uploaded_file)
-                if image_url:
-                    st.success("Image uploaded!")
-                else:
-                    st.warning("Image upload failed, continuing without image")
+            image_data = encode_image(uploaded_file)
+            if image_data is None:
+                st.warning("Image too large! Max 500KB")
+            else:
+                st.success("Image ready!")
         
-        add_product(name, price, stock, image_url)
+        add_product(name, price, stock, image_data)
         st.success("✅ Product added successfully!")
         st.balloons()
         st.rerun()
@@ -97,7 +87,8 @@ if st.button("Add Product", type="primary"):
 
 st.markdown("---")
 
-# عرض المنتجاتst.header("📦 Products")
+# عرض المنتجات
+st.header("📦 Products")
 df = get_products()
 
 if not df.empty:
@@ -105,11 +96,14 @@ if not df.empty:
     
     for index, row in df.iterrows():
         with st.container():
-            col1, col2, col3 = st.columns([1, 3, 1])
-            
+            col1, col2, col3 = st.columns([1, 3, 1])            
             with col1:
-                if row['image_url']:
-                    st.image(row['image_url'], width=150)
+                if row['image_data']:
+                    try:
+                        img_bytes = base64.b64decode(row['image_data'])
+                        st.image(img_bytes, width=150)
+                    except:
+                        st.write("🖼️ No Image")
                 else:
                     st.write("🖼️ No Image")
             
