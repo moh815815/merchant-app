@@ -32,6 +32,17 @@ init_db()
 st.title("Sales Management System")
 st.success("Connected!")
 
+# عرض المنتجات الأول
+st.header("Products")
+df = get_products()
+if not df.empty:
+    st.dataframe(df, use_container_width=True)
+else:
+    st.info("No products yet")
+
+st.markdown("---")
+
+# نموذج الإضافة
 with st.form("add_product_form"):
     st.header("Add New Product")
     name = st.text_input("Product Name")
@@ -43,12 +54,6 @@ with st.form("add_product_form"):
         if name:
             add_product(name, price, stock)
             st.success("Product added successfully!")
+            st.rerun()  # ده السطر المهم!
         else:
             st.error("Please enter product name!")
-
-st.header("Products")
-df = get_products()
-if not df.empty:
-    st.dataframe(df, use_container_width=True)
-else:
-    st.info("No products yet")
