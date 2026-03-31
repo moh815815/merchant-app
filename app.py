@@ -43,60 +43,60 @@ def get_sales():
         return pd.DataFrame(rows, columns=["id", "product_id", "quantity", "total", "date"])
     return pd.DataFrame()
 
-st.set_page_config(page_title="نظام المبيعات", layout="wide")
+st.set_page_config(page_title="Merchant System", layout="wide")
 init_db()
 
-st.title("نظام إدارة المبيعات")
-menu = ["الرئيسية", "المنتجات", "بيع", "تقارير", "اضافة منتج"]
-choice = st.sidebar.selectbox("القائمة", menu)
+st.title("Sales Management System")
+menu = ["Dashboard", "Products", "Sales", "Reports", "Add Product"]
+choice = st.sidebar.selectbox("Menu", menu)
 
-if choice == "الرئيسية":
-    st.header("لوحة التحكم")
+if choice == "Dashboard":
+    st.header("Dashboard")
     products_df = get_products()
     sales_df = get_sales()
     col1, col2 = st.columns(2)
-    col1.metric("المنتجات", len(products_df))
-    col2.metric("المبيعات", len(sales_df))
+    col1.metric("Products", len(products_df))
+    col2.metric("Sales", len(sales_df))
 
-elif choice == "المنتجات":
-    st.header("المنتجات")
+elif choice == "Products":
+    st.header("Products")
     df = get_products()
     if not df.empty:
         st.dataframe(df, use_container_width=True)
     else:
-        st.warning("لا توجد منتجات")
+        st.warning("No products yet")
 
-elif choice == "بيع":
-    st.header("تسجيل بيع")
+elif choice == "Sales":
+    st.header("Record Sale")
     df = get_products()
     if not df.empty:
-        product = st.selectbox("المنتج", df["name"].tolist())
+        product = st.selectbox("Product", df["name"].tolist())
         pdata = df[df["name"] == product].iloc[0]
         pid = int(pdata["id"])
         price = float(pdata["price"])
         stock = int(pdata["stock"])
-        st.info(f"السعر: {price} | المخزون: {stock}")
-        qty = st.number_input("الكمية", min_value=1, max_value=stock, value=1)
+        st.info(f"Price: {price} | Stock: {stock}")
+        qty = st.number_input("Quantity", min_value=1, max_value=stock, value=1)
         total = price * qty
-        st.success(f"الإجمالي: {total}")
-        if st.button("تأكيد"):
+        st.success(f"Total: {total}")
+        if st.button("Confirm Sale"):
             record_sale(pid, qty, total)
-            st.success("تم!")
+            st.success("Done!")
             st.rerun()
 
-elif choice == "تقارير":
-    st.header("التقارير")
+elif choice == "Reports":
+    st.header("Reports")
     df = get_sales()
     if not df.empty:
         st.dataframe(df, use_container_width=True)
-        st.metric("إجمالي الإيرادات", df["total"].sum())
+        st.metric("Total Revenue", df["total"].sum())
 
-elif choice == "اضافة منتج":
-    st.header("إضافة منتج")
-    name = st.text_input("الاسم")
-    price = st.number_input("السعر", min_value=0.0)
-    stock = st.number_input("الكمية", min_value=1)
-    if st.button("إضافة"):        if name:
+elif choice == "Add Product":
+    st.header("Add Product")
+    name = st.text_input("Name")
+    price = st.number_input("Price", min_value=0.0)
+    stock = st.number_input("Stock", min_value=1)
+    if st.button("Add"):        if name:
             add_product(name, price, stock)
-            st.success("تم!")
+            st.success("Added!")
             st.rerun()
